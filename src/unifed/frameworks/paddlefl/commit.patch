@@ -1,0 +1,208 @@
+diff --git a/__init__.py b/__init__.py
+index 1f54862..b051427 100644
+--- a/__init__.py
++++ b/__init__.py
+@@ -1,16 +1,2 @@
+-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+-#
+-# Licensed under the Apache License, Version 2.0 (the "License"
+-# you may not use this file except in compliance with the License.
+-# You may obtain a copy of the License at
+-#
+-#     http://www.apache.org/licenses/LICENSE-2.0
+-#
+-# Unless required by applicable law or agreed to in writing, software
+-# distributed under the License is distributed on an "AS IS" BASIS,
+-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-# See the License for the specific language governing permissions and
+-# limitations under the License.
+-
+ from . import mpc
+ from . import paddle_fl
+diff --git a/paddle_fl/core/scheduler/agent_master.py b/paddle_fl/core/scheduler/agent_master.py
+index 7c1fe4f..09e3011 100644
+--- a/paddle_fl/core/scheduler/agent_master.py
++++ b/paddle_fl/core/scheduler/agent_master.py
+@@ -15,7 +15,7 @@
+ import zmq
+ import time
+ import random
+-
++import flbenchmark.logging
+ 
+ def recv_and_parse_kv(socket):
+     message = socket.recv()
+@@ -67,7 +67,7 @@ class FLWorkerAgent(object):
+         self.socket.send_string("FINISH\t{}".format(self.current_ep))
+         key, value = recv_and_parse_kv(self.socket)
+         if key == "WAIT":
+-            time.sleep(3)
++            time.sleep(0.2)
+             return True
+         return False
+ 
+@@ -81,6 +81,8 @@ class FLWorkerAgent(object):
+             return False
+         return False
+ 
++    def end_training(self, encode_str): # encode_str = (my_metric)_(total_evaluation_time)_(metric_name)
++        self.socket.send_string("END_TRAINING\t{}".format(encode_str))
+ 
+ class FLScheduler(object):
+     def __init__(self, worker_num, server_num, port=9091, socket=None):
+@@ -119,9 +121,14 @@ class FLScheduler(object):
+                len(self.fl_servers) == self.server_num:
+                 ready = True
+ 
+-    def start_fl_training(self):
++    def start_fl_training(self, model_size, sample_num):
+         # loop until training is done
++        logger = flbenchmark.logging.Logger(id = 0, agent_type='aggregator')
++
++        logger.training_start()
++
+         while True:
++            # randomly select "sample_worker_num" of total workers
+             random.shuffle(self.fl_workers)
+             worker_dict = {}
+             for worker in self.fl_workers[:self.sample_worker_num]:
+@@ -129,11 +136,23 @@ class FLScheduler(object):
+ 
+             ready_workers = []
+             all_ready_to_train = False
++            have_one = False
++
+             while not all_ready_to_train:
+                 key, value = recv_and_parse_kv(self.socket)
+-                if key == "JOIN":
++                if key == "JOIN":            
+                     if value in worker_dict:
+                         if worker_dict[value] == 0:
++                            if have_one == False :
++                                logger.training_round_start()
++                            have_one = True
++
++                            work_number = int(value.split(':')[-1]) - 8000 + 1
++                            
++                            # print(work_number)
++                            logger.communication_start(target_id = work_number)
++                            logger.communication_end(metrics={'byte': model_size})
++
+                             ready_workers.append(value)
+                             worker_dict[value] = 1
+                             self.socket.send_string("ACCEPT\t0")
+@@ -141,6 +160,17 @@ class FLScheduler(object):
+                     else:
+                         if value not in ready_workers:
+                             ready_workers.append(value)
++                elif key == "END_TRAINING":
++                    logger.training_end()
++                    with logger.model_evaluation() as e:
++                        metric, total_time, metric_name = value.split('_')
++                        metric, total_time = float(metric), float(total_time)
++                        e.report_metric(metric_name, metric)
++                    
++                    logger.end()
++                    open('if_end', 'w').write('if_end=true')
++                    exit()
++
+                 self.socket.send_string("REJECT\t0")
+                 if len(ready_workers) == len(self.fl_workers):
+                     all_ready_to_train = True
+@@ -156,4 +186,7 @@ class FLScheduler(object):
+                     self.socket.send_string("REJECT\t0")
+                 if len(finish_training_dict) == len(worker_dict):
+                     all_finish_training = True
+-            time.sleep(5)
++            
++            logger.training_round_end(metrics={'client_num': sample_num})
++            time.sleep(0.2)
++        
+diff --git a/paddle_fl/core/strategy/fl_distribute_transpiler.py b/paddle_fl/core/strategy/fl_distribute_transpiler.py
+index 6715eb2..a17b9e5 100644
+--- a/paddle_fl/core/strategy/fl_distribute_transpiler.py
++++ b/paddle_fl/core/strategy/fl_distribute_transpiler.py
+@@ -321,6 +321,9 @@ class FLDistributeTranspiler(object):
+ 
+         self._get_distributed_optimizer_vars()
+         self.origin_program._parameters_on_pservers = self.vars_overview
++        # print(self.vars_overview.overview())
++        # print(send_vars)
++        # print(recv_vars)
+ 
+     def get_trainer_program(self, wait_port=True):
+         """
+diff --git a/paddle_fl/core/trainer/fl_trainer.py b/paddle_fl/core/trainer/fl_trainer.py
+index cb8910a..37afad5 100644
+--- a/paddle_fl/core/trainer/fl_trainer.py
++++ b/paddle_fl/core/trainer/fl_trainer.py
+@@ -140,7 +140,7 @@ class FLTrainer(object):
+         serving_io.save_model(model_path, client_conf_path, feed_vars,
+                               target_vars, self._main_program)
+ 
+-    def stop(self):
++    def stop(self, number):
+         # ask for termination with master endpoint
+         # currently not open sourced, will release the code later
+         # TODO(guru4elephant): add connection with master
+@@ -148,11 +148,18 @@ class FLTrainer(object):
+             while not self.agent.finish_training():
+                 self._logger.debug("Wait others finish")
+                 continue
++        
++        if number == 0:
++            return True
++
+         while not self.agent.can_join_training():
+             self._logger.debug("Wait permit")
+             continue
+         self._logger.debug("Ready to train")
+         return False
++    
++    def end_training(self, encode_str): # encode_str = (my_metric)_(total_evaluation_time)_(metric_name)
++        self.agent.end_training(encode_str)
+ 
+ 
+ class FedAvgTrainer(FLTrainer):
+@@ -175,19 +182,33 @@ class FedAvgTrainer(FLTrainer):
+     def reset(self):
+         self.cur_step = 0
+ 
+-    def run_with_epoch(self, reader, feeder, fetch, num_epoch):
++    def run_with_epoch(self, reader, feeder, fetch, num_epoch, logger, model_size):
+         self._logger.debug("begin to run recv program")
+         self.exe.run(self._recv_program)
+         epoch = 0
++
++
+         for i in range(num_epoch):
+-            for data in reader():
+-                self.exe.run(self._main_program,
+-                             feed=feeder.feed(data),
+-                             fetch_list=fetch)
+-            self.cur_step += 1
+-            epoch += 1
++            with logger.computation() as c: 
++                tot_loss, tot_sample_num = 0, 0
++
++                for data in reader():
++                    my_np = self.exe.run(self._main_program,
++                                feed=feeder.feed(data),
++                                fetch_list=fetch)
++
++                    now_len = my_np[1].shape[0]
++                    tot_loss += float(my_np[0]) * now_len
++                    tot_sample_num += now_len
++
++                c.report_metric("loss", tot_loss / tot_sample_num)
++                self.cur_step += 1
++                epoch += 1
++
+         self._logger.debug("begin to run send program")
+-        self.exe.run(self._send_program)
++        with logger.communication(target_id = 0) as c:
++            self.exe.run(self._send_program)
++            c.report_metric('byte', model_size)
+ 
+     def run(self, feed, fetch):
+         self._logger.debug(

@@ -1,8 +1,11 @@
 {
-  "framework": "tff",
+  "framework": "paddlefl",
   "algorithm": "fedavg",
   "dataset": "default_credit_horizontal",
   "model": "mlp_128",
+  "bench_param": {
+    "device": "cpu"
+  },
   "deployment": {
     "mode": "colink",
     "participants": [
@@ -29,11 +32,13 @@
     ]
   },
   "training": {
-    "epochs": 30,
+    "epochs": 3,
     "batch_size": 32,
     "learning_rate": 0.01,
     "client_per_round": 2,
+    "loss_func": "cross_entropy",
     "optimizer": "sgd",
+    "inner_step": 1,
     "optimizer_param": {
       "momentum": 0.9,
       "dampening": 0,

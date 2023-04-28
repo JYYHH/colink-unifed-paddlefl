@@ -1,21 +1,21 @@
 [package]
-name = "unifed-tff"
+name = "unifed-paddlefl"
 version = "0.0.0"
 keywords = ["federated learning", "machine learning"]
-description = "tff is TensorFlow Federated for short, it's based on TensorFlow."
+description = "paddlefl is based on PaddlePaddle"
 language = "python"
 
 
 install_script = """
-if { conda env list | grep 'colink-protocol-unifed-tff'; } >/dev/null 2>&1; then
-    conda env remove -n colink-protocol-unifed-tff
+if { conda env list | grep 'colink-protocol-unifed-paddlefl'; } >/dev/null 2>&1; then
+    conda env remove -n colink-protocol-unifed-paddlefl
 fi
-conda create -n colink-protocol-unifed-tff python=3.9 -y
-conda activate colink-protocol-unifed-tff
+conda create -n colink-protocol-unifed-paddlefl python=3.8 -y
+conda activate colink-protocol-unifed-paddlefl
 pip install .
 """
 
 entrypoint = """
-conda activate colink-protocol-unifed-tff
-unifed-tff
+conda activate colink-protocol-unifed-paddlefl
+unifed-paddlefl
 """
