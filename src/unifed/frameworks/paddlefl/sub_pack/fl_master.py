@@ -71,7 +71,10 @@ job_generator.set_infer_feed_and_target_names(
 
 build_strategy = FLStrategyFactory()
 build_strategy.fed_avg = True
-build_strategy.inner_step = config["training"]["inner_step"]
+try:
+    build_strategy.inner_step = config["training"]["inner_step"]
+except:
+    build_strategy.inner_step = 1
 strategy = build_strategy.create_fl_strategy()
 
 endpoints = ["127.0.0.1:8981"]

@@ -46,5 +46,4 @@ COPY src/unifed/frameworks/paddlefl/sub_pack /test/
 
 # COPY demo/data_loader.py demo/leaf_utils.py /test/
 
-# ENTRYPOINT ["/bin/bash", "run.sh"]
-# ENTRYPOINT ["/bin/bash", "unifed-paddlefl"]
+ENTRYPOINT ["/bin/bash", "run.sh"]

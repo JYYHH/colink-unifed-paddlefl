@@ -39,8 +39,6 @@ def run_external_process_and_collect_result(cl: CL.CoLink, participant_id,  role
             stderr=subprocess.PIPE
         )
 
-
-
         # print(f"Writing to {temp_output_filename} and {temp_log_filename}...")
         # with open(temp_output_filename, 'w') as f:
         #     f.write(f"Some output for {role} here.")
@@ -57,6 +55,10 @@ def run_external_process_and_collect_result(cl: CL.CoLink, participant_id,  role
         # with open(temp_log_filename, "rb") as f:
         #     log = f.read()
         # cl.create_entry(f"{UNIFED_TASK_DIR}:{cl.get_task_id()}:log", log)
+
+        if role == "server":
+            cl.send_variable("server_status", "OK")
+
         return json.dumps({
             "server_ip": server_ip,
             "stdout": stdout.decode(),
@@ -93,6 +95,8 @@ def run_client(cl: CL.CoLink, param: bytes, participants: List[CL.Participant]):
     assert len(server_in_list) == 1
     p_server = server_in_list[0]
     server_ip = cl.recv_variable("server_ip", p_server).decode()
+
+    server_setup = cl.recv_variable("server_status", p_server).decode()
     # run external program
     participant_id = [i for i, p in enumerate(participants) if p.user_id == cl.get_user_id()][0]
     return run_external_process_and_collect_result(cl, participant_id, "client", server_ip)

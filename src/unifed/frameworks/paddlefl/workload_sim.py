@@ -50,9 +50,6 @@ def simulate_workload():
                 "python3.8",  
                 "-u",
                 "fl_scheduler.py",
-                # ">",
-                # "logs/scheduler.log",
-                # "2>&1",
             ]
         )
 
@@ -64,15 +61,14 @@ def simulate_workload():
                 "-u",
                 "fl_server.py",
                 f"{participant_id}",
-                # ">",
-                # f"logs/server{participant_id}.log",
-                # "2>&1",
             ]
         )
         sleep(2)
 
+
+
     elif role == 'client':
-        pass
+        
         # subprocess.run(
         #     [
         #         "python3.8",  

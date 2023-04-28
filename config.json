@@ -11,9 +11,7 @@
         "epochs": 3,
         "batch_size": 32,
         "learning_rate": 0.01,
-        "loss_func": "cross_entropy",
         "optimizer": "sgd",
-        "inner_step": 1,
         "client_per_round": 2,
         "optimizer_param": {
             "momentum": 0.9,
