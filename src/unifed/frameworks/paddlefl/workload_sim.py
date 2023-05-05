@@ -12,9 +12,9 @@ import os
 def simulate_workload():
     argv = sys.argv
 
-    if len(argv) != 3:
+    if len(argv) != 4:
         raise ValueError(f'Invalid arguments. Got {argv}')
-    role, participant_id = argv[1:3]
+    role, participant_id, server_ip = argv[1:4]
     
     print('Simulated workload here begin.')
 
@@ -41,7 +41,8 @@ def simulate_workload():
         subprocess.run(
             [
                 "python3.8",  
-                "fl_master.py"
+                "fl_master.py",
+                server_ip
             ]
         )
 
@@ -50,6 +51,7 @@ def simulate_workload():
                 "python3.8",  
                 "-u",
                 "fl_scheduler.py",
+                server_ip
             ]
         )
 
@@ -61,6 +63,7 @@ def simulate_workload():
                 "-u",
                 "fl_server.py",
                 f"{participant_id}",
+                server_ip
             ]
         )
         sleep(2)
@@ -69,41 +72,46 @@ def simulate_workload():
 
     elif role == 'client':
         
-        # subprocess.run(
-        #     [
-        #         "python3.8",  
-        #         "download.py"
-        #     ]
-        # )
+        subprocess.run(
+            [
+                "python3.8",  
+                "download.py"
+            ]
+        )
 
-        # subprocess.run(
-        #     [
-        #         "python3.8",  
-        #         "leaf_utils.py"
-        #     ]
-        # )
+        subprocess.run(
+            [
+                "python3.8",  
+                "leaf_utils.py"
+            ]
+        )
 
         # os.system("unset http_proxy")
         # os.system("unset https_proxy")
         # os.system("ps -ef | grep -E fl_ | grep -v grep | awk '{print $2}' | xargs kill -9")
-        # os.system("mkdir logs")
+        os.system("mkdir logs")
 
-        # # subprocess.run(
-        # #     [
-        # #         "python3.8",  
-        # #         "fl_master.py"
-        # #     ]
-        # # )
-
-        subprocess.Popen(
+        subprocess.run(
             [
                 "python3.8",  
-                "-u",
-                "fl_trainer.py",
-                participant_id
+                "fl_master.py",
+                server_ip
             ]
         )
 
+        trainer = subprocess.Popen(
+            [
+                "python3.8",  
+                "fl_trainer.py",
+                participant_id,
+                server_ip
+            ],
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE
+        )
+        stdout, stderr = trainer.communicate()
+        print(f"STDOUT = \n    {stdout}")
+        print(f"STDERR = \n    {stderr}")
     else:
         raise ValueError(f'Invalid role {role}')
 

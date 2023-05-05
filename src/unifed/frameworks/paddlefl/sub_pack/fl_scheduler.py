@@ -2,6 +2,8 @@ from paddle_fl.paddle_fl.core.scheduler.agent_master import FLScheduler
 import json
 config = json.load(open('config.json', 'r'))
 import pickle
+import sys
+ip_addr = sys.argv[1]
 
 sample_num = config["training"]["client_per_round"]
 server_num = 1

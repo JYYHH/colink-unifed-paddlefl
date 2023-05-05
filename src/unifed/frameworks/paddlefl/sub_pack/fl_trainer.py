@@ -15,6 +15,7 @@ import flbenchmark.logging
 import pickle
 import os
 from sklearn.metrics import mean_squared_error, roc_auc_score
+ip_addr = sys.argv[2]
 
 trainer_id = int(sys.argv[1])  # trainer id for each guest
     
@@ -65,15 +66,15 @@ logger = flbenchmark.logging.Logger(id=trainer_id + 1, agent_type='client')
 job_path = "fl_job_config"
 job = FLRunTimeJob()
 job.load_trainer_job(job_path, trainer_id)
-job._scheduler_ep = "127.0.0.1:9091"
+job._scheduler_ep = ip_addr + ":9091"
 print(job._target_names)
 trainer = FLTrainerFactory().create_fl_trainer(job)
 trainer._current_ep = "127.0.0.1:{}".format(8000 + trainer_id)
 
-if config["bench_param"]["device"] == "cpu":
-    place = fluid.CPUPlace()
-else:
+try:
     place = fluid.CUDAPlace(trainer_id % 4)
+except:
+    place = fluid.CPUPlace()
 
 trainer.start(place)
 
@@ -139,7 +140,7 @@ def train_test(train_test_program, train_test_feed, train_test_reader):
 
 epoch_id = 0
 step = 0
-epoch = config["training"]["epochs"]
+epoch = config["training"]["global_epochs"]
 count_by_step = False
 if count_by_step:
     output_folder = "model_node%d" % trainer_id
@@ -180,7 +181,7 @@ with logger.training():
                         break
             else:
                 trainer.run_with_epoch(
-                    train_reader, feeder, fetch=[job._target_names[0], job._target_names[1]], num_epoch=config["training"]["inner_step"], logger=logger, model_size=model_size)
+                    train_reader, feeder, fetch=[job._target_names[0], job._target_names[1]], num_epoch=config["training"]["local_epochs"], logger=logger, model_size=model_size)
                     
             if trainer_id == 0:
                 save_dir = (output_folder + "/epoch_%d") % epoch_id

@@ -8,9 +8,10 @@
         "device": "cpu"
     },
     "training": {
-        "epochs": 3,
+        "global_epochs": 3,
         "batch_size": 32,
         "learning_rate": 0.01,
+        "local_epochs": 1,
         "optimizer": "sgd",
         "client_per_round": 2,
         "optimizer_param": {

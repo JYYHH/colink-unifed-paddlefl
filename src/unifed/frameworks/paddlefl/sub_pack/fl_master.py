@@ -7,6 +7,8 @@ import my_model
 import json 
 import pickle
 import os
+import sys
+ip_addr = sys.argv[1]
 
 config = json.load(open('config.json', 'r'))
 
@@ -72,12 +74,12 @@ job_generator.set_infer_feed_and_target_names(
 build_strategy = FLStrategyFactory()
 build_strategy.fed_avg = True
 try:
-    build_strategy.inner_step = config["training"]["inner_step"]
+    build_strategy.inner_step = config["training"]["local_epochs"]
 except:
     build_strategy.inner_step = 1
 strategy = build_strategy.create_fl_strategy()
 
-endpoints = ["127.0.0.1:8981"]
+endpoints = [ip_addr + ":8981"]
 output = "fl_job_config"
 job_generator.generate_fl_job(
     strategy, server_endpoints=endpoints, worker_num=config["training"]["client_per_round"], output=output)

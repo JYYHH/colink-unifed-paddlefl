@@ -34,6 +34,7 @@ def run_external_process_and_collect_result(cl: CL.CoLink, participant_id,  role
                 # takes 4 args: mode(client/server), participant_id, output, and logging destination
                 role,
                 str(participant_id),
+                server_ip
             ],
             stdout=subprocess.PIPE, 
             stderr=subprocess.PIPE
