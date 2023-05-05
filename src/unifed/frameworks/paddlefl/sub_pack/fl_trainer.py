@@ -17,7 +17,7 @@ import os
 from sklearn.metrics import mean_squared_error, roc_auc_score
 ip_addr = sys.argv[2]
 
-trainer_id = int(sys.argv[1])  # trainer id for each guest
+trainer_id = int(sys.argv[1]) - 1 # trainer id for each guest
     
 
 config = json.load(open('config.json', 'r'))
@@ -65,6 +65,7 @@ logger = flbenchmark.logging.Logger(id=trainer_id + 1, agent_type='client')
 
 job_path = "fl_job_config"
 job = FLRunTimeJob()
+print(f"Trainer-ID now is {trainer_id} --------------")
 job.load_trainer_job(job_path, trainer_id)
 job._scheduler_ep = ip_addr + ":9091"
 print(job._target_names)
