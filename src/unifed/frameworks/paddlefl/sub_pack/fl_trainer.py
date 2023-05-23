@@ -72,10 +72,10 @@ print(job._target_names)
 trainer = FLTrainerFactory().create_fl_trainer(job)
 trainer._current_ep = "127.0.0.1:{}".format(8000 + trainer_id)
 
-try:
-    place = fluid.CUDAPlace(trainer_id % 4)
-except:
-    place = fluid.CPUPlace()
+# try:
+#     place = fluid.CUDAPlace(trainer_id % 4)
+# except:
+place = fluid.CPUPlace()
 
 trainer.start(place)
 
