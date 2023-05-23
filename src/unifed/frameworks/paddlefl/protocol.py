@@ -97,6 +97,8 @@ def simulate_workload(role, participant_id, server_ip):
             ]
         )
 
+        print("Leaf_utils over")
+
         # os.system("unset http_proxy")
         # os.system("unset https_proxy")
         # os.system("ps -ef | grep -E fl_ | grep -v grep | awk '{print $2}' | xargs kill -9")

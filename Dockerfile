@@ -33,7 +33,7 @@ RUN source /root/.bashrc \
     && pip3.8 install -e .
     
 
-VOLUME ../data /data
+# VOLUME ../data /data
 
 WORKDIR /test
 COPY test /test/test/
